@@ -1,6 +1,8 @@
 // Background service worker for Pick and Chat extension
 
 let extensionEnabled = false;
+let chatGPTWindowId = null;
+let chatGPTTabId = null;
 
 // Initialize extension state on startup
 chrome.runtime.onStartup.addListener(() => {
@@ -23,20 +25,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         extensionEnabled = request.enabled;
         updateContextMenu();
     } else if (request.action === 'sendToChatGPT') {
-        const text = request.text;
-        const encodedText = encodeURIComponent(text);
-        const chatGPTUrl = `https://chatgpt.com/?q=${encodedText}`;
-        
-        // Open or update ChatGPT window
-        chrome.windows.create({
-            url: chatGPTUrl,
-            type: 'normal',
-            focused: true
-        });
+        openOrUpdateChatGPT(request.text);
     }
     
     sendResponse({success: true});
 });
+
+function openOrUpdateChatGPT(text) {
+    const encodedText = encodeURIComponent(text);
+    const chatGPTUrl = `https://chatgpt.com/?q=${encodedText}`;
+
+    if (chatGPTTabId !== null) {
+        chrome.tabs.get(chatGPTTabId, (tab) => {
+            if (chrome.runtime.lastError || !tab) {
+                createWindow();
+            } else {
+                chrome.tabs.update(chatGPTTabId, { url: chatGPTUrl, active: true }, () => {
+                    chrome.windows.update(chatGPTWindowId, { focused: true });
+                });
+            }
+        });
+    } else {
+        createWindow();
+    }
+
+    function createWindow() {
+        chrome.windows.create({
+            url: chatGPTUrl,
+            type: 'normal',
+            focused: true
+        }, (win) => {
+            if (win && win.tabs && win.tabs[0]) {
+                chatGPTWindowId = win.id;
+                chatGPTTabId = win.tabs[0].id;
+            }
+        });
+    }
+}
 
 // Update context menu based on extension state
 function updateContextMenu() {
