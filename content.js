@@ -88,7 +88,7 @@ function handleContextMenu(event) {
 function shouldSkipElement(element) {
     // Skip script, style, and other non-visible elements
     const tagName = element.tagName.toLowerCase();
-    const skipTags = ['script', 'style', 'meta', 'link', 'title', 'head'];
+    const skipTags = ['script', 'style', 'meta', 'link', 'title', 'head', 'html', 'body'];
     
     if (skipTags.includes(tagName)) {
         return true;
